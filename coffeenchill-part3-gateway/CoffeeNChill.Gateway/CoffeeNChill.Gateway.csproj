@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>CoffeeNChill.Gateway</RootNamespace>
+    <!-- Produces CoffeeNChill.Gateway.xml, which Swagger reads for endpoint docs -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- CS1591 = "missing XML comment on public member"; we document controllers/DTOs, not every helper -->
+    <NoWarn>$(NoWarn);1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Azure.Data.Tables" Version="12.9.1" />
+    <PackageReference Include="Azure.Storage.Files.Shares" Version="12.21.0" />
+    <PackageReference Include="Azure.Storage.Queues" Version="12.21.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.9.0" />
+  </ItemGroup>
+
+</Project>

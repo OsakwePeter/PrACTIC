@@ -1,0 +1,364 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>CoffeeNChill.Gateway</name>
+    </assembly>
+    <members>
+        <member name="T:CoffeeNChill.Gateway.Auth.AppRoles">
+            <summary>Role names used by [Authorize(Roles = ...)] and stored as the Users table PartitionKey.</summary>
+        </member>
+        <member name="F:CoffeeNChill.Gateway.Auth.AppRoles.AdminOrStaff">
+            <summary>Roles allowed to modify menu items, documents and order statuses.</summary>
+        </member>
+        <member name="T:CoffeeNChill.Gateway.Auth.PlaceholderAuthHandler">
+             <summary>
+             TEMPORARY authentication scheme that never authenticates anyone, so every
+             [Authorize] endpoint answers 401 until real JWT auth is merged.
+            
+             Thandokuhle: delete this file and the "AUTH PLACEHOLDER" block in Program.cs, then register
+             AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(...). The controller
+             attributes need no changes.
+             </summary>
+        </member>
+        <member name="T:CoffeeNChill.Gateway.Controllers.DocumentsController">
+            <summary>Staff documents (recipes, manuals, policies). Every endpoint needs an Admin or Staff token.</summary>
+        </member>
+        <member name="M:CoffeeNChill.Gateway.Controllers.DocumentsController.Upload(Microsoft.AspNetCore.Http.IFormFile,System.Threading.CancellationToken)">
+            <summary>Uploads a PDF, DOC or DOCX (max 10 MB) to the staff-docs file share.</summary>
+            <param name="file">The document, sent as multipart/form-data under the field name "file".</param>
+            <response code="201">Uploaded; the Location header points to the download URL.</response>
+            <response code="400">Missing, empty, oversized or wrong-type file.</response>
+        </member>
+        <member name="M:CoffeeNChill.Gateway.Controllers.DocumentsController.List(System.Threading.CancellationToken)">
+            <summary>Lists all documents with name, size and last-modified date.</summary>
+            <response code="200">The documents (empty list if none).</response>
+        </member>
+        <member name="M:CoffeeNChill.Gateway.Controllers.DocumentsController.Download(System.String,System.Threading.CancellationToken)">
+            <summary>Streams a document back to the client.</summary>
+            <param name="fileName">Exact file name, e.g. "espresso-recipe.pdf".</param>
+            <response code="200">The file content.</response>
+            <response code="404">No such document.</response>
+        </member>
+        <member name="M:CoffeeNChill.Gateway.Controllers.DocumentsController.Delete(System.String,System.Threading.CancellationToken)">
+            <summary>Deletes a document.</summary>
+            <param name="fileName">Exact file name.</param>
+            <response code="204">Deleted.</response>
+            <response code="404">No such document.</response>
+        </member>
+        <member name="T:CoffeeNChill.Gateway.Controllers.MenuController">
+            <summary>Menu management. Reading the menu is public; changing it needs an Admin or Staff token.</summary>
+        </member>
+        <member name="M:CoffeeNChill.Gateway.Controllers.MenuController.GetAll(System.Threading.CancellationToken)">
+            <summary>Gets every menu item.</summary>
+            <response code="200">The full menu.</response>
+            <response code="503">Storage is unreachable.</response>
+        </member>
+        <member name="M:CoffeeNChill.Gateway.Controllers.MenuController.GetByCategory(System.String,System.Threading.CancellationToken)">
+            <summary>Gets all menu items in one category.</summary>
+            <param name="category">Category name, e.g. "Hot Drinks".</param>
+            <response code="200">Items in the category (empty list if none).</response>
+        </member>
+        <member name="M:CoffeeNChill.Gateway.Controllers.MenuController.GetMenuItem(System.String,System.String,System.Threading.CancellationToken)">
+            <summary>Gets a single menu item.</summary>
+            <param name="category">Category (partition key).</param>
+            <param name="id">Item SKU (row key).</param>
+            <response code="200">The item.</response>
+            <response code="404">No such item.</response>
+        </member>
+        <member name="M:CoffeeNChill.Gateway.Controllers.MenuController.Create(CoffeeNChill.Gateway.DTOs.CreateMenuItemDto,System.Threading.CancellationToken)">
+            <summary>Creates a menu item (Admin or Staff).</summary>
+            <response code="201">Item created; the Location header points to it.</response>
+            <response code="400">Validation failed.</response>
+            <response code="401">Missing or invalid token.</response>
+            <response code="403">Token is valid but the role is not allowed.</response>
+            <response code="409">An item with this category and SKU already exists.</response>
+        </member>
+        <member name="M:CoffeeNChill.Gateway.Controllers.MenuController.Update(System.String,System.String,CoffeeNChill.Gateway.DTOs.UpdateMenuItemDto,System.Threading.CancellationToken)">
+            <summary>Updates a menu item's name, description, price or availability (Admin or Staff).</summary>
+            <param name="category">Category (partition key).</param>
+            <param name="id">Item SKU (row key).</param>
+            <response code="200">The updated item.</response>
+            <response code="400">Validation failed.</response>
+            <response code="401">Missing or invalid token.</response>
+            <response code="403">Token is valid but the role is not allowed.</response>
+            <response code="404">No such item.</response>
+        </member>
+        <member name="M:CoffeeNChill.Gateway.Controllers.MenuController.Delete(System.String,System.String,System.Threading.CancellationToken)">
+            <summary>Deletes a menu item (Admin or Staff).</summary>
+            <param name="category">Category (partition key).</param>
+            <param name="id">Item SKU (row key).</param>
+            <response code="204">Item deleted.</response>
+            <response code="401">Missing or invalid token.</response>
+            <response code="403">Token is valid but the role is not allowed.</response>
+            <response code="404">No such item.</response>
+        </member>
+        <member name="T:CoffeeNChill.Gateway.Controllers.OrdersController">
+            <summary>Order placement (public) and order status tracking.</summary>
+        </member>
+        <member name="M:CoffeeNChill.Gateway.Controllers.OrdersController.QueueOrder(CoffeeNChill.Gateway.DTOs.CreateOrderDto,System.Threading.CancellationToken)">
+            <summary>
+            Places an order on the queue. The request returns immediately; the ProcessOrderQueue Function
+            creates the Orders table row and advances its status in the background.
+            </summary>
+            <response code="202">Order accepted. Poll GET /api/orders/{orderId} for progress.</response>
+            <response code="400">Validation failed.</response>
+            <response code="503">The queue is unreachable.</response>
+        </member>
+        <member name="M:CoffeeNChill.Gateway.Controllers.OrdersController.GetOrder(System.String,System.Threading.CancellationToken)">
+            <summary>Gets the current status of an order.</summary>
+            <param name="orderId">The order id returned when it was queued.</param>
+            <response code="200">The order and its status.</response>
+            <response code="404">Not found. It may still be waiting in the queue.</response>
+        </member>
+        <member name="M:CoffeeNChill.Gateway.Controllers.OrdersController.UpdateStatus(CoffeeNChill.Gateway.DTOs.UpdateOrderStatusDto,System.Threading.CancellationToken)">
+            <summary>Advances an order's status (Admin or Staff). Statuses only move forward.</summary>
+            <response code="200">The updated order.</response>
+            <response code="400">Unknown status.</response>
+            <response code="401">Missing or invalid token.</response>
+            <response code="403">Token is valid but the role is not allowed.</response>
+            <response code="404">No such order.</response>
+            <response code="409">The status would not move forward.</response>
+        </member>
+        <member name="T:CoffeeNChill.Gateway.DTOs.StaffDocumentDto">
+            <summary>Metadata for a file in the staff-docs share.</summary>
+        </member>
+        <member name="P:CoffeeNChill.Gateway.DTOs.StaffDocumentDto.SizeBytes">
+            <summary>File size in bytes.</summary>
+        </member>
+        <member name="T:CoffeeNChill.Gateway.DTOs.CreateMenuItemDto">
+            <summary>Request body for creating a menu item.</summary>
+        </member>
+        <member name="P:CoffeeNChill.Gateway.DTOs.CreateMenuItemDto.Category">
+            <summary>Menu category, e.g. "Hot Drinks". Becomes the table PartitionKey.</summary>
+            <example>Hot Drinks</example>
+        </member>
+        <member name="P:CoffeeNChill.Gateway.DTOs.CreateMenuItemDto.Sku">
+            <summary>Unique item SKU, e.g. "COF-001". Becomes the table RowKey.</summary>
+            <example>COF-001</example>
+        </member>
+        <member name="P:CoffeeNChill.Gateway.DTOs.CreateMenuItemDto.Name">
+            <example>Espresso</example>
+        </member>
+        <member name="P:CoffeeNChill.Gateway.DTOs.CreateMenuItemDto.Description">
+            <example>Double shot of house blend</example>
+        </member>
+        <member name="P:CoffeeNChill.Gateway.DTOs.CreateMenuItemDto.Price">
+            <summary>Price in rand. Must be greater than zero.</summary>
+            <example>32.50</example>
+        </member>
+        <member name="P:CoffeeNChill.Gateway.DTOs.CreateMenuItemDto.IsAvailable">
+            <summary>Whether the item can currently be ordered.</summary>
+        </member>
+        <member name="T:CoffeeNChill.Gateway.DTOs.UpdateMenuItemDto">
+            <summary>
+            Request body for updating a menu item. Send only the fields that change;
+            omitted fields keep their current value. At least one field is required.
+            </summary>
+        </member>
+        <member name="P:CoffeeNChill.Gateway.DTOs.UpdateMenuItemDto.Name">
+            <example>Espresso (double)</example>
+        </member>
+        <member name="P:CoffeeNChill.Gateway.DTOs.UpdateMenuItemDto.Price">
+            <example>35.00</example>
+        </member>
+        <member name="T:CoffeeNChill.Gateway.DTOs.MenuItemDto">
+            <summary>A menu item as returned to clients.</summary>
+        </member>
+        <member name="T:CoffeeNChill.Gateway.DTOs.CreateOrderDto">
+            <summary>Request body for placing an order on the queue.</summary>
+        </member>
+        <member name="P:CoffeeNChill.Gateway.DTOs.CreateOrderDto.OrderId">
+            <summary>Optional. If omitted the gateway generates one (e.g. ORD-2026-9F3A1C2B).</summary>
+            <example>ORD-2026-8801</example>
+        </member>
+        <member name="P:CoffeeNChill.Gateway.DTOs.CreateOrderDto.CustomerName">
+            <example>Jane Smith</example>
+        </member>
+        <member name="P:CoffeeNChill.Gateway.DTOs.CreateOrderDto.SelectedItemSKUs">
+            <summary>SKUs of the ordered menu items (at least one).</summary>
+            <example>["COF-001", "PAS-104"]</example>
+        </member>
+        <member name="P:CoffeeNChill.Gateway.DTOs.CreateOrderDto.TotalPrice">
+            <summary>Order total in rand. Must be greater than zero.</summary>
+            <example>65.00</example>
+        </member>
+        <member name="P:CoffeeNChill.Gateway.DTOs.CreateOrderDto.OrderTimestamp">
+            <summary>Optional. Generated in UTC by the gateway if omitted.</summary>
+        </member>
+        <member name="T:CoffeeNChill.Gateway.DTOs.QueuedOrderResponseDto">
+            <summary>Returned (HTTP 202) once an order has been accepted onto the queue.</summary>
+        </member>
+        <member name="T:CoffeeNChill.Gateway.DTOs.OrderStatusDto">
+            <summary>Current state of an order, read from the Orders table.</summary>
+        </member>
+        <member name="P:CoffeeNChill.Gateway.DTOs.OrderStatusDto.OrderDate">
+            <summary>Order date (the Orders table PartitionKey, yyyy-MM-dd).</summary>
+        </member>
+        <member name="P:CoffeeNChill.Gateway.DTOs.OrderStatusDto.Status">
+            <summary>Received, Preparing, Ready or Collected.</summary>
+        </member>
+        <member name="T:CoffeeNChill.Gateway.DTOs.UpdateOrderStatusDto">
+            <summary>Request body for a staff member advancing an order's status.</summary>
+        </member>
+        <member name="P:CoffeeNChill.Gateway.DTOs.UpdateOrderStatusDto.OrderId">
+            <example>ORD-2026-8801</example>
+        </member>
+        <member name="P:CoffeeNChill.Gateway.DTOs.UpdateOrderStatusDto.Status">
+            <summary>Preparing, Ready or Collected (statuses only move forward).</summary>
+            <example>Ready</example>
+        </member>
+        <member name="T:CoffeeNChill.Gateway.Exceptions.ApiException">
+            <summary>
+            Base class for errors the gateway raises on purpose. The global exception middleware
+            turns each one into an RFC 7807 problem response with the matching HTTP status code,
+            so controllers and services never build error responses by hand.
+            </summary>
+        </member>
+        <member name="T:CoffeeNChill.Gateway.Exceptions.NotFoundException">
+            <summary>The requested menu item, order or document does not exist (HTTP 404).</summary>
+        </member>
+        <member name="T:CoffeeNChill.Gateway.Exceptions.ConflictException">
+            <summary>The request clashes with current state, e.g. duplicate SKU or backwards status change (HTTP 409).</summary>
+        </member>
+        <member name="T:CoffeeNChill.Gateway.Exceptions.ApiValidationException">
+            <summary>Business-rule validation failed (HTTP 400).</summary>
+        </member>
+        <member name="T:CoffeeNChill.Gateway.Exceptions.ServiceUnavailableException">
+            <summary>A backing service (queue, table, file share) could not be reached (HTTP 503).</summary>
+        </member>
+        <member name="T:CoffeeNChill.Gateway.Mapping.MappingExtensions">
+            <summary>
+            Hand-written DTO ⇄ model mapping. Controllers only ever see DTOs on the wire; storage
+            entities never leak out of the gateway. (No AutoMapper: the mapping is small and explicit.)
+            </summary>
+        </member>
+        <member name="M:CoffeeNChill.Gateway.Mapping.MappingExtensions.ToQueuedOrder(CoffeeNChill.Gateway.DTOs.CreateOrderDto,System.DateTimeOffset)">
+            <summary>Builds the queue message. Generates OrderId / timestamp when the client left them out.</summary>
+        </member>
+        <member name="M:CoffeeNChill.Gateway.Mapping.MappingExtensions.ParseSkus(System.String)">
+            <summary>The Orders table stores SKUs as a JSON array string; a bad value yields an empty list.</summary>
+        </member>
+        <member name="T:CoffeeNChill.Gateway.Middleware.ExceptionHandlingMiddleware">
+            <summary>
+            Global exception handler: the single place where exceptions become HTTP responses.
+            Every failure is returned as an RFC 7807 "problem details" JSON body with a traceId, and
+            internal details (stack traces, storage messages) are never leaked outside Development.
+            </summary>
+        </member>
+        <member name="M:CoffeeNChill.Gateway.Middleware.ExceptionHandlingMiddleware.Map(System.Exception)">
+            <summary>Decides the status code and the (client-safe) message for an exception.</summary>
+        </member>
+        <member name="T:CoffeeNChill.Gateway.Models.MenuItemEntity">
+            <summary>
+            Row in the MenuItems Azure Table. Same schema the Part 1 Functions use:
+            PartitionKey = Category, RowKey = SKU.
+            </summary>
+        </member>
+        <member name="T:CoffeeNChill.Gateway.Models.OrderEntity">
+            <summary>
+            Row in the Orders Azure Table, written by the ProcessOrderQueue Function (Part 2).
+            PartitionKey = order date (yyyy-MM-dd), RowKey = OrderId.
+            </summary>
+        </member>
+        <member name="P:CoffeeNChill.Gateway.Models.OrderEntity.SelectedItemSKUs">
+            <summary>SKU list stored as a JSON array string (matches the Functions project).</summary>
+        </member>
+        <member name="T:CoffeeNChill.Gateway.Models.OrderStatuses">
+            <summary>The barista lifecycle: Received → Preparing → Ready → Collected.</summary>
+        </member>
+        <member name="F:CoffeeNChill.Gateway.Models.OrderStatuses.All">
+            <summary>All statuses in lifecycle order (index = rank).</summary>
+        </member>
+        <member name="M:CoffeeNChill.Gateway.Models.OrderStatuses.TryNormalise(System.String,System.String@)">
+            <summary>Case-insensitive match; returns the canonical spelling.</summary>
+        </member>
+        <member name="M:CoffeeNChill.Gateway.Models.OrderStatuses.Rank(System.String)">
+            <summary>Position in the lifecycle (Received = 0 … Collected = 3), or -1 if unknown.</summary>
+        </member>
+        <member name="T:CoffeeNChill.Gateway.Models.QueuedOrder">
+            <summary>
+            The JSON message placed on order-processing-queue. Property names (PascalCase) must match
+            the Order model that ProcessOrderQueue deserialises in the Functions project.
+            </summary>
+        </member>
+        <member name="T:CoffeeNChill.Gateway.Models.StaffDocument">
+            <summary>A file stored in the staff-docs Azure File Share.</summary>
+        </member>
+        <member name="T:CoffeeNChill.Gateway.Services.DocumentService">
+            <summary>Stores staff documents in the "staff-docs" Azure File Share.</summary>
+        </member>
+        <member name="T:CoffeeNChill.Gateway.Services.IMenuService">
+            <summary>Menu storage (Azure Table "MenuItems").</summary>
+        </member>
+        <member name="M:CoffeeNChill.Gateway.Services.IMenuService.CreateAsync(CoffeeNChill.Gateway.Models.MenuItemEntity,System.Threading.CancellationToken)">
+            <exception cref="T:CoffeeNChill.Gateway.Exceptions.ConflictException">An item with this category + SKU already exists.</exception>
+        </member>
+        <member name="M:CoffeeNChill.Gateway.Services.IMenuService.UpdateAsync(System.String,System.String,CoffeeNChill.Gateway.DTOs.UpdateMenuItemDto,System.Threading.CancellationToken)">
+            <returns>The updated item, or null if it does not exist.</returns>
+        </member>
+        <member name="M:CoffeeNChill.Gateway.Services.IMenuService.DeleteAsync(System.String,System.String,System.Threading.CancellationToken)">
+            <returns>True if deleted, false if it did not exist.</returns>
+        </member>
+        <member name="T:CoffeeNChill.Gateway.Services.IOrderService">
+            <summary>Order queue producer (Azure Queue) and order tracking (Azure Table "Orders").</summary>
+        </member>
+        <member name="M:CoffeeNChill.Gateway.Services.IOrderService.EnqueueAsync(CoffeeNChill.Gateway.Models.QueuedOrder,System.Threading.CancellationToken)">
+            <exception cref="T:CoffeeNChill.Gateway.Exceptions.ServiceUnavailableException">The queue cannot be reached.</exception>
+        </member>
+        <member name="M:CoffeeNChill.Gateway.Services.IOrderService.UpdateStatusAsync(System.String,System.String,System.Threading.CancellationToken)">
+            <returns>The updated order, or null if it does not exist.</returns>
+            <exception cref="T:CoffeeNChill.Gateway.Exceptions.ApiValidationException">Unknown status name.</exception>
+            <exception cref="T:CoffeeNChill.Gateway.Exceptions.ConflictException">Status would not move forward.</exception>
+        </member>
+        <member name="T:CoffeeNChill.Gateway.Services.IDocumentService">
+            <summary>Staff documents (Azure File Share "staff-docs").</summary>
+        </member>
+        <member name="M:CoffeeNChill.Gateway.Services.IDocumentService.DownloadAsync(System.String,System.Threading.CancellationToken)">
+            <returns>A readable stream, or null if the file does not exist.</returns>
+        </member>
+        <member name="M:CoffeeNChill.Gateway.Services.IDocumentService.DeleteAsync(System.String,System.Threading.CancellationToken)">
+            <returns>True if deleted, false if it did not exist.</returns>
+        </member>
+        <member name="T:CoffeeNChill.Gateway.Services.MenuService">
+            <summary>Talks to the MenuItems table directly through the Azure Tables SDK.</summary>
+        </member>
+        <member name="T:CoffeeNChill.Gateway.Services.OrderService">
+            <summary>
+            Producer side of the order workflow: puts orders on order-processing-queue (the ProcessOrderQueue
+            Function picks them up) and reads/updates the Orders table that Function writes to.
+            </summary>
+        </member>
+        <member name="T:CoffeeNChill.Gateway.Services.StorageSettings">
+            <summary>
+            Reads storage connection strings from configuration. Environment variables override appsettings.json,
+            so docker-compose can inject real values with e.g. AzureWebJobsStorage=...
+            </summary>
+        </member>
+        <member name="M:CoffeeNChill.Gateway.Services.StorageSettings.Primary(Microsoft.Extensions.Configuration.IConfiguration)">
+            <summary>Tables + Queues connection string (Azurite locally, a storage account in production).</summary>
+        </member>
+        <member name="M:CoffeeNChill.Gateway.Services.StorageSettings.Files(Microsoft.Extensions.Configuration.IConfiguration)">
+            <summary>
+            File share connection string. Azurite does NOT emulate Azure Files, so the staff-docs endpoints
+            need a real storage account in AzureFileStorage (same setting the Functions project uses).
+            Falls back to the primary connection string if AzureFileStorage is empty.
+            </summary>
+        </member>
+        <member name="T:CoffeeNChill.Gateway.Services.TableBackedService">
+            <summary>
+            Creates the table on first use (not at startup) so the gateway still boots when storage is
+            briefly unavailable; the failure then surfaces as a clean 503 from the exception middleware.
+            </summary>
+        </member>
+        <member name="T:CoffeeNChill.Gateway.Services.UploadValidator">
+            <summary>Rules for staff document uploads (same limits as the Part 1 Function).</summary>
+        </member>
+        <member name="M:CoffeeNChill.Gateway.Services.UploadValidator.Validate(System.String,System.String,System.Int64)">
+            <summary>
+            Checks size, extension and MIME type, and returns a safe file name (path segments stripped,
+            so "../../x.pdf" becomes "x.pdf").
+            </summary>
+            <exception cref="T:CoffeeNChill.Gateway.Exceptions.ApiValidationException">The upload breaks a rule.</exception>
+        </member>
+    </members>
+</doc>
