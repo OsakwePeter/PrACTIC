@@ -1,0 +1,104 @@
+-- Create tables
+CREATE TABLE STOCK
+(
+  stock_id           NUMBER(5)        NOT NULL PRIMARY KEY,
+  stock_type         VARCHAR2(100)    NOT NULL,
+  stock_model        VARCHAR2(50)     NOT NULL,
+  manufacturer       VARCHAR2(50)     NOT NULL
+);
+
+CREATE TABLE CUSTOMER
+(
+  cust_id            VARCHAR2(5)    NOT NULL PRIMARY KEY,
+  cust_fname         VARCHAR2(100)  NOT NULL,
+  cust_sname         VARCHAR2(100)  NOT NULL,
+  cust_address       VARCHAR2(200)  NOT NULL,
+  cust_contact       VARCHAR2(12)   NOT NULL
+);
+
+CREATE TABLE REPAIRS
+(
+  repair_id          VARCHAR2(5)    NOT NULL PRIMARY KEY,
+  repair_work        VARCHAR2(100)  NOT NULL,
+  repair_date        DATE           NOT NULL,
+  repair_hrs         NUMBER(3,2)    NOT NULL
+);
+
+CREATE TABLE SALES
+(
+  sales_num          NUMBER(5)      NOT NULL PRIMARY KEY,
+  sales_date         DATE           NOT NULL,
+  sales_amt          NUMBER(8,2)    NOT NULL,
+  stock_id           NUMBER(5)      NOT NULL CONSTRAINT fk_stock_id
+                        REFERENCES STOCK(stock_id),
+  cust_id            VARCHAR2(5)    NOT NULL CONSTRAINT fk_customer_id
+                        REFERENCES CUSTOMER(cust_id),
+  repair_id          VARCHAR2(5)    NOT NULL CONSTRAINT fk_repair_id
+                        REFERENCES REPAIRS(repair_id)
+);
+
+-- Insert data into STOCK
+INSERT ALL
+  INTO STOCK(stock_id, stock_type, stock_model, manufacturer)
+    VALUES(11111, 'Desktop', 'NeoPro X1', 'Dell')
+  INTO STOCK(stock_id, stock_type, stock_model, manufacturer)
+    VALUES(22222, 'Laptop', 'ZenBook 14', 'Asus')
+  INTO STOCK(stock_id, stock_type, stock_model, manufacturer)
+    VALUES(33333, 'Server', 'PowerServer G7', 'Lenovo')
+  INTO STOCK(stock_id, stock_type, stock_model, manufacturer)
+    VALUES(44444, 'Laptop', 'Swift 3', 'Acer')
+  INTO STOCK(stock_id, stock_type, stock_model, manufacturer)
+    VALUES(55555, 'Notebook', 'ThinkBook 15', 'HP')
+SELECT * FROM dual;
+COMMIT;
+
+-- Insert data into CUSTOMER
+INSERT ALL
+  INTO CUSTOMER(cust_id, cust_fname, cust_sname, cust_address, cust_contact)
+    VALUES('C201', 'Liam', 'Brown', '12 Park Avenue', '0824567890')
+  INTO CUSTOMER(cust_id, cust_fname, cust_sname, cust_address, cust_contact)
+    VALUES('C202', 'Emma', 'Taylor', '45 River Street', '0769876543')
+  INTO CUSTOMER(cust_id, cust_fname, cust_sname, cust_address, cust_contact)
+    VALUES('C203', 'Noah', 'Wilson', '23 Hill Road', '0865432198')
+  INTO CUSTOMER(cust_id, cust_fname, cust_sname, cust_address, cust_contact)
+    VALUES('C204', 'Ava', 'Johnson', '8 Lakeview Drive', '0763214578')
+  INTO CUSTOMER(cust_id, cust_fname, cust_sname, cust_address, cust_contact)
+    VALUES('C205', 'Ethan', 'Smith', '19 Ocean Road', '0829876541')
+  INTO CUSTOMER(cust_id, cust_fname, cust_sname, cust_address, cust_contact)
+    VALUES('C206', 'Sophia', 'Davis', '77 Sunset Blvd', '0843219876')
+  INTO CUSTOMER(cust_id, cust_fname, cust_sname, cust_address, cust_contact)
+    VALUES('C207', 'Mason', 'Miller', '5 Forest Lane', '0745567890')
+  INTO CUSTOMER(cust_id, cust_fname, cust_sname, cust_address, cust_contact)
+    VALUES('C208', 'Isabella', 'Moore', '9 Palm Street', '0812345678')
+SELECT * FROM dual;
+COMMIT;
+
+-- Insert data into REPAIRS
+INSERT ALL
+  INTO REPAIRS(repair_id, repair_work, repair_date, repair_hrs)
+    VALUES('R101', 'SSD Upgrade', TO_DATE('15-JAN-2025','DD-MON-YYYY'), 2.5)
+  INTO REPAIRS(repair_id, repair_work, repair_date, repair_hrs)
+    VALUES('R102', 'RAM Replacement', TO_DATE('18-JAN-2025','DD-MON-YYYY'), 3.0)
+  INTO REPAIRS(repair_id, repair_work, repair_date, repair_hrs)
+    VALUES('R103', 'Battery Replacement', TO_DATE('19-JAN-2025','DD-MON-YYYY'), 2.0)
+  INTO REPAIRS(repair_id, repair_work, repair_date, repair_hrs)
+    VALUES('R104', 'OS Upgrade', TO_DATE('20-JAN-2025','DD-MON-YYYY'), 1.5)
+  INTO REPAIRS(repair_id, repair_work, repair_date, repair_hrs)
+    VALUES('R105', 'Graphics Card Replacement', TO_DATE('25-JAN-2025','DD-MON-YYYY'), 4.0)
+SELECT * FROM dual;
+COMMIT;
+
+-- Insert data into SALES
+INSERT ALL
+  INTO SALES(sales_num, sales_date, sales_amt, stock_id, cust_id, repair_id)
+    VALUES(201, TO_DATE('27-JAN-2025','DD-MON-YYYY'), 2500, 44444, 'C207', 'R103')
+  INTO SALES(sales_num, sales_date, sales_amt, stock_id, cust_id, repair_id)
+    VALUES(202, TO_DATE('20-JAN-2025','DD-MON-YYYY'), 1800, 11111, 'C206', 'R104')
+  INTO SALES(sales_num, sales_date, sales_amt, stock_id, cust_id, repair_id)
+    VALUES(203, TO_DATE('23-JAN-2025','DD-MON-YYYY'), 2100, 55555, 'C205', 'R105')
+  INTO SALES(sales_num, sales_date, sales_amt, stock_id, cust_id, repair_id)
+    VALUES(204, TO_DATE('17-JAN-2025','DD-MON-YYYY'), 1750, 22222, 'C203', 'R102')
+  INTO SALES(sales_num, sales_date, sales_amt, stock_id, cust_id, repair_id)
+    VALUES(205, TO_DATE('19-JAN-2025','DD-MON-YYYY'), 3000, 11111, 'C208', 'R101')
+SELECT * FROM dual;
+COMMIT;
